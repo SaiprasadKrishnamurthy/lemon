@@ -1,0 +1,39 @@
+- name: Client Count
+  dataSourceType: RDBMS
+  dataSourceSpringBeanName: dataSource
+  dbObjectName: client_count
+  visualizations:
+   - pie:
+      name: Device Type Count
+      categoryField: device_type
+      categoryValue: COUNT
+      dataTransfomerClass: com.foo.MyClass
+      dataPushFrequencyInSeconds: 2
+   - line:
+      name: Bandwidth Consumed
+      xAxisField: timestamp
+      yAxisField: totalBandwidthConsumed
+      dataTransfomerClass: com.foo.MyClass
+      dataPushFrequencyInSeconds: 2
+   - multiline:
+      name: Device Type Bandwidth Consumption
+      xAxisField: a
+      yAxisFields: [b,c]
+      dataPushFrequencyInSeconds: 2
+   - bar:
+      name: Device Total Utilization
+      xAxisField: timestamp
+      yAxisField: totalBandwidthConsumed
+      dataTransfomerClass: com.foo.MyClass
+      dataPushFrequencyInSeconds: 2
+   - json:
+      name: Client Names And Locations Raw
+      dataTransfomerClass: com.foo.MyClass
+      dataPushFrequencyInSeconds: 2
+
+
+
+
+
+
+
