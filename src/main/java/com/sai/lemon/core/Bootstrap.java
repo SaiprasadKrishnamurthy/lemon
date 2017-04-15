@@ -1,11 +1,12 @@
 package com.sai.lemon.core;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
 import com.sai.lemon.model.AddressPrefixType;
+import com.sai.lemon.model.LemonConfig;
+import com.sai.lemon.model.Visualization;
 import com.sai.lemon.springbridge.SpringVerticleFactory;
-import com.sai.lemon.verticles.ClearCacheVerticle;
-import com.sai.lemon.verticles.DataTransformerVerticle;
-import com.sai.lemon.verticles.JdbcQueryExecutorVerticle;
-import com.sai.lemon.verticles.OutputDispatcherVerticle;
+import com.sai.lemon.verticles.*;
 import io.vertx.core.DeploymentOptions;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpMethod;
@@ -25,8 +26,16 @@ import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
+import java.util.stream.Stream;
+
+import static java.util.stream.Collectors.toList;
 
 /**
  * Created by saipkri on 14/04/17.
@@ -43,7 +52,7 @@ public class Bootstrap {
     }
 
     @PostConstruct
-    public void onStartup() {
+    public void onStartup() throws Exception {
         Vertx vertx = Vertx.vertx();
         VerticleFactory verticleFactory = applicationContext.getBean(SpringVerticleFactory.class);
         vertx.registerVerticleFactory(verticleFactory);
@@ -88,15 +97,45 @@ public class Bootstrap {
         String portOverride = System.getProperty("lemon.web.port");
         httpServer.requestHandler(router::accept).listen(StringUtils.hasText(portOverride) ? Integer.parseInt(portOverride.trim()) : 8765);
 
+        String configsDir = System.getProperty("lemon.configs.dir");
+        if (org.apache.commons.lang3.StringUtils.isBlank(configsDir)) {
+            throw new IllegalArgumentException("System property 'lemon.configs.dir' must be specified. This directory should contain all the config yaml files.");
+        }
 
-        JsonObject config1 = new JsonObject("{\"name\": \"clientCount\"}");
+        ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
+        ObjectMapper jsonMapper = new ObjectMapper();
+
+        List<LemonConfig> configs = Files.list(Paths.get(configsDir))
+                .flatMap(p -> {
+                    try {
+                        return Stream.of(config(mapper, p));
+                    } catch (IOException e) {
+                        throw new RuntimeException(e);
+                    }
+                })
+                .collect(toList());
+
+
+        System.out.println(configs);
+
 
         // needs to be done in a loop per config.
-        vertx.deployVerticle(verticleFactory.prefix() + ":" + JdbcQueryExecutorVerticle.class.getName(), new DeploymentOptions().setInstances(1).setConfig(config1).setWorker(true));
-        vertx.deployVerticle(verticleFactory.prefix() + ":" + DataTransformerVerticle.class.getName(), new DeploymentOptions().setInstances(1).setConfig(config1).setWorker(false));
-        vertx.deployVerticle(verticleFactory.prefix() + ":" + OutputDispatcherVerticle.class.getName(), new DeploymentOptions().setInstances(1).setConfig(config1).setWorker(false));
-        vertx.deployVerticle(verticleFactory.prefix() + ":" + ClearCacheVerticle.class.getName(), new DeploymentOptions().setInstances(1).setConfig(config1).setWorker(false));
+        for (LemonConfig config : configs) {
+            for (Visualization vis : config.getVisualizations()) {
+                JsonObject conf = new JsonObject(jsonMapper.writeValueAsString(vis));
+                conf.put("jdbcTemplateName", config.getJdbcTemplateName());
+                int instances = Integer.parseInt(vis.getScaleInstances().trim());
+                vertx.deployVerticle(verticleFactory.prefix() + ":" + JdbcQueryExecutorVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(true));
+                vertx.deployVerticle(verticleFactory.prefix() + ":" + VisualizerConversionVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(false));
+                vertx.deployVerticle(verticleFactory.prefix() + ":" + DataTransformerVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(false));
+                vertx.deployVerticle(verticleFactory.prefix() + ":" + OutputDispatcherVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(false));
+                vertx.deployVerticle(verticleFactory.prefix() + ":" + ClearCacheVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(false));
+                vertx.setPeriodic(Long.parseLong(vis.getDataPushFrequencyInSeconds().trim()) * 1000, timerId -> vertx.eventBus().send(AddressPrefixType.FETCH_DATA.address(vis.getId()), conf));
+            }
+        }
+    }
 
-        vertx.setPeriodic(1000, timerId -> vertx.eventBus().send(AddressPrefixType.FETCH_DATA.address(config1.getString("name")), config1));
+    private LemonConfig[] config(ObjectMapper mapper, Path p) throws java.io.IOException {
+        return mapper.readValue(p.toFile(), LemonConfig[].class);
     }
 }

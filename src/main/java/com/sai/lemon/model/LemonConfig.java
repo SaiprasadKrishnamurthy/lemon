@@ -7,11 +7,8 @@ public class LemonConfig
 {
     private String name;
 
-    private String dbObjectName;
+    private String jdbcTemplateName;
 
-    private String dataSourceSpringBeanName;
+    private Visualization[] visualizations;
 
-    private Visualizations[] visualizations;
-
-    private String dataSourceType;
 }

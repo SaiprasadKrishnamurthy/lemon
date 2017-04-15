@@ -23,6 +23,6 @@ public class ClearCacheVerticle extends AbstractVerticle {
     }
 
     public String toString() {
-        return this.getClass().getCanonicalName() + ":" + this.hashCode() + " [" + config.getString("name") + "]";
+        return this.getClass().getCanonicalName() + ":" + this.hashCode() + " [" + config.getString("id") + "]";
     }
 }

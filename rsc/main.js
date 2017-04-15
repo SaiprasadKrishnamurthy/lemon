@@ -18,7 +18,7 @@ function regForMessages() {
             if (message) {
 				console.info('Found message: ' + message);
 				var msgList = $("div#messages");
-				msgList.html(msgList.html() + "<div>" + message.body + "</div>");
+				msgList.html(msgList.html() + "<div>" + JSON.stringify(message.body) + "</div>");
 
             } else if (error) {
             	console.error(error);

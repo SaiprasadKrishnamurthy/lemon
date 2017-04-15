@@ -11,6 +11,9 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 import transformers.UpperCaseDataTransformer;
 
+import java.util.List;
+import java.util.Map;
+
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 
 /**
@@ -32,18 +35,18 @@ public class DataTransformerVerticle extends AbstractVerticle {
     public void start() throws Exception {
         // Look up the config.
         this.config = config();
-        vertx.eventBus().consumer(AddressPrefixType.TRANSFORM_DATA.address(config.getString("name")), this::transformData);
+        vertx.eventBus().consumer(AddressPrefixType.TRANSFORM_DATA.address(config.getString("id")), this::transformData);
     }
 
-    private void transformData(final Message<Object> message) {
+    private void transformData(final Message<JsonObject> message) {
         try {
             DataTransformer transformerClass = UpperCaseDataTransformer.class.newInstance(); // TODO get from config
-            JsonObject transformedData = transformerClass.transformationFunction(applicationContext, (JsonObject) message.body());
+            JsonObject transformedData = transformerClass.transformationFunction(applicationContext, message.body());
             vertx.eventBus()
-                    .send(AddressPrefixType.AUDIT_DATA.address(config.getString("name")), transformedData);
+                    .send(AddressPrefixType.AUDIT_DATA.address(config.getString("id")), transformedData);
 
             vertx.eventBus()
-                    .send(AddressPrefixType.OUTPUT_DISPATCHER.address(config.getString("name")), transformedData);
+                    .send(AddressPrefixType.OUTPUT_DISPATCHER.address(config.getString("id")), transformedData);
 
         } catch (InstantiationException | IllegalAccessException e) {
             e.printStackTrace();
@@ -51,6 +54,6 @@ public class DataTransformerVerticle extends AbstractVerticle {
     }
 
     public String toString() {
-        return this.getClass().getCanonicalName() + ":" + this.hashCode() + " [" + config.getString("name") + "]";
+        return this.getClass().getCanonicalName() + ":" + this.hashCode() + " [" + config.getString("id") + "]";
     }
 }
