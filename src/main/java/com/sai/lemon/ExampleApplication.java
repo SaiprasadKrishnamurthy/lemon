@@ -7,6 +7,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
+import com.rabbitmq.jms.admin.RMQConnectionFactory;
+
 
 @Configuration
 @ComponentScan("com.sai.lemon")
@@ -19,6 +21,15 @@ public class ExampleApplication {
         ds.setUrl("jdbc:postgresql://localhost:5432/lemon");
         ds.setInitialSize(6);
         return new JdbcTemplate(ds);
+    }
+
+    @Bean(name = "rabbitConnectionFactory")
+    public RMQConnectionFactory connectionFactory() {
+        RMQConnectionFactory cf = new RMQConnectionFactory();
+        cf.setHost("localhost");
+        cf.setUsername("guest");
+        cf.setPassword("guest");
+        return cf;
     }
 
     public static void main(String[] args) throws Exception {

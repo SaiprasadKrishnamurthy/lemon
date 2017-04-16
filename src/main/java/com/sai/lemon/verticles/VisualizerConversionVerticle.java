@@ -11,7 +11,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 
@@ -36,10 +36,15 @@ public class VisualizerConversionVerticle extends AbstractVerticle {
     private void convert(final Message<JsonObject> message) {
         if (config.getString("type").equalsIgnoreCase("pie")) {
             PieChart pie = new PieChart();
-            pie.setId(message.body().getString("id"));
-            List<Map<String, Object>> resultsArr = message.body().getJsonArray("results").getList();
-            for (Map<String, Object> result : resultsArr) {
-                pie.addAllData(result);
+            pie.setId(config.getString("id"));
+            List<JsonObject> resultsArr = message.body().getJsonArray("results").getList();
+            for (JsonObject result : resultsArr) {
+                List<Object> values = result.getMap().values().stream().collect(Collectors.toList());
+                int size = values.size();
+                if (size != 2) {
+                    throw new IllegalArgumentException("Supplied SQL is not sutiable for rendering a pie chart. It muts have only 2 values in the select clause and the second one must be a numeric value.");
+                }
+                pie.addData(values.get(0).toString(), values.get(1));
             }
             message.reply(JsonUtils.toJsonObject(pie));
         } else if (config.getString("type").equalsIgnoreCase("line")) {

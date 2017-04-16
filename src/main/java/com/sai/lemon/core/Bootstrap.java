@@ -22,10 +22,16 @@ import io.vertx.ext.web.handler.sockjs.SockJSHandlerOptions;
 import io.vertx.ext.web.impl.RouterImpl;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
+import org.springframework.jms.core.JmsTemplate;
+import org.springframework.jms.listener.DefaultMessageListenerContainer;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
+import javax.jms.ConnectionFactory;
+import javax.jms.JMSException;
+import javax.jms.MessageListener;
+import javax.jms.TextMessage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -45,7 +51,7 @@ public class Bootstrap {
 
     @Autowired
     private final ApplicationContext applicationContext;
-
+    private static final String lemon_data_refresh_notif_topic = "lemon_data_refresh_notif_topic";
 
     public Bootstrap(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
@@ -57,6 +63,7 @@ public class Bootstrap {
         VerticleFactory verticleFactory = applicationContext.getBean(SpringVerticleFactory.class);
         vertx.registerVerticleFactory(verticleFactory);
 
+        final JmsTemplate sender = new JmsTemplate((ConnectionFactory) applicationContext.getBean("rabbitConnectionFactory"));
         Router router = new RouterImpl(vertx);
 
         HttpServer httpServer = vertx.createHttpServer();
@@ -74,7 +81,7 @@ public class Bootstrap {
 
         // Cache clear
         router.get("/cache-clear").handler(ctx -> {
-            vertx.eventBus().publish(AddressPrefixType.CLEAR_CACHE.address(ctx.request().getParam("name")), ctx.request().getParam("name"));
+            sender.send(lemon_data_refresh_notif_topic, session -> session.createTextMessage(ctx.request().getParam("name")));
             ctx.response().setStatusCode(200).end("Cache cleared!");
         });
 
@@ -133,6 +140,22 @@ public class Bootstrap {
                 vertx.setPeriodic(Long.parseLong(vis.getDataPushFrequencyInSeconds().trim()) * 1000, timerId -> vertx.eventBus().send(AddressPrefixType.FETCH_DATA.address(vis.getId()), conf));
             }
         }
+
+        DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
+        listenerContainer.setConnectionFactory((ConnectionFactory) applicationContext.getBean("rabbitConnectionFactory"));
+        listenerContainer.setDestinationName(lemon_data_refresh_notif_topic);
+        listenerContainer.setPubSubDomain(true);
+        listenerContainer.setMessageListener((MessageListener) message -> {
+            String text = null;
+            try {
+                text = ((TextMessage) message).getText();
+                vertx.eventBus().publish(AddressPrefixType.CLEAR_CACHE.address(text.trim()), text.trim());
+            } catch (JMSException e) {
+                throw new RuntimeException(e);
+            }
+        });
+        listenerContainer.initialize();
+        listenerContainer.start();
     }
 
     private LemonConfig[] config(ObjectMapper mapper, Path p) throws java.io.IOException {

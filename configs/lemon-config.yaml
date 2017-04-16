@@ -9,7 +9,7 @@
      disableDatabasePolling: true
      scaleInstances: 2
    - id: DeviceUsageTrend
-     type: line
+     type: pie
      dataTransfomerClass: com.foo.MyClass
      sql: "select client_type, count(client_type) from clients_activity  where client_status='active' group by client_type"
      dataPushFrequencyInSeconds: 2

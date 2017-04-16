@@ -28,7 +28,7 @@ public class OutputDispatcherVerticle extends AbstractVerticle {
     private void broadcast(final Message<JsonObject> message) {
         // Convert to the appropriate visualizer model.
         vertx.eventBus().send(AddressPrefixType.VISUALIZER_CONVERSION.address(config.getString("id")), message.body(), reply -> {
-            vertx.eventBus().publish(AddressPrefixType.OUTPUT.getValue(), message.body());
+            vertx.eventBus().publish(AddressPrefixType.OUTPUT.getValue(), reply.result().body());
         });
     }
 }

@@ -10,7 +10,7 @@ public class PieChart {
     private String id;
     private Map<String, Object> data = new LinkedHashMap<>();
 
-    public void addAllData(final Map<String, Object> data) {
-        data.putAll(data);
+    public void addData(final String key, final Object value) {
+        data.put(key, value);
     }
 }
