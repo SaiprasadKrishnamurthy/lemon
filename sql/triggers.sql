@@ -2,7 +2,8 @@ CREATE OR REPLACE FUNCTION clients_activity_watcher() RETURNS trigger AS
 $$
 BEGIN
   	SELECT content FROM http_get('http://localhost:8765/cache-clear?name=DeviceTypeCount');
-  	SELECT content FROM http_get('http://localhost:8765/cache-clear?name=DeviceUsageTrend');
+  	SELECT content FROM http_get('http://localhost:8765/cache-clear?name=RoutersMemoryAvgUtilizationTimeSeries');
+  	SELECT content FROM http_get('http://localhost:8765/cache-clear?name=SwitchesMemoryAvgUtilizationTimeSeries');
 RETURN NEW;
 END;
 $$ LANGUAGE 'plpgsql';

@@ -3,8 +3,17 @@
   visualizations:
    - id: DeviceTypeCount
      type: pie
-     dataTransfomerClass: com.foo.MyClass
      sql: "select client_type, count(client_type) from clients_activity  where client_status='active' group by client_type"
+     dataPushFrequencyInSeconds: 2
+     disableDatabasePolling: true
+   - id: RoutersMemoryAvgUtilizationTimeSeries
+     type: line
+     sql: "select now(), avg(memory_utilization) from clients_activity  where client_status='active' and client_type='router'"
+     dataPushFrequencyInSeconds: 2
+     disableDatabasePolling: true
+   - id: SwitchesMemoryAvgUtilizationTimeSeries
+     type: line
+     sql: "select now(), avg(memory_utilization) from clients_activity  where client_status='active' and client_type='switches'"
      dataPushFrequencyInSeconds: 2
      disableDatabasePolling: true
 

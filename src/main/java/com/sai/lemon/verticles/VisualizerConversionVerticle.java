@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sai.lemon.JsonUtils;
 import com.sai.lemon.model.AddressPrefixType;
 import com.sai.lemon.model.PieChart;
+import com.sai.lemon.model.XYChart;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
@@ -42,17 +43,34 @@ public class VisualizerConversionVerticle extends AbstractVerticle {
                 List<Object> values = result.getMap().values().stream().collect(Collectors.toList());
                 int size = values.size();
                 if (size != 2) {
-                    throw new IllegalArgumentException("Supplied SQL is not sutiable for rendering a pie chart. It muts have only 2 values in the select clause and the second one must be a numeric value.");
+                    throw new IllegalArgumentException("Supplied SQL is not sutiable for rendering a pie chart. It must have only 2 values in the select clause and the second one must be a numeric value.");
                 }
                 pie.addData(values.get(0).toString(), values.get(1));
             }
             message.reply(JsonUtils.toJsonObject(pie));
         } else if (config.getString("type").equalsIgnoreCase("line")) {
-            // TODO
+            XYChart xyChart = getXyChart(message);
+            message.reply(JsonUtils.toJsonObject(xyChart));
         } else if (config.getString("type").equalsIgnoreCase("json")) {
             message.reply(message);
         } else if (config.getString("type").equalsIgnoreCase("bar")) {
-            // TODO
+            XYChart xyChart = getXyChart(message);
+            message.reply(JsonUtils.toJsonObject(xyChart));
         }
+    }
+
+    private XYChart getXyChart(Message<JsonObject> message) {
+        XYChart xyChart = new XYChart();
+        xyChart.setId(config.getString("id"));
+        List<JsonObject> resultsArr = message.body().getJsonArray("results").getList();
+        for (JsonObject result : resultsArr) {
+            List<Object> values = result.getMap().values().stream().collect(Collectors.toList());
+            int size = values.size();
+            if (size != 2) {
+                throw new IllegalArgumentException("Supplied SQL is not sutiable for rendering a line chart. It must have only 2 values in the select clause and the second one must be a numeric value.");
+            }
+            xyChart.addData(values.get(0).toString(), values.get(1));
+        }
+        return xyChart;
     }
 }
