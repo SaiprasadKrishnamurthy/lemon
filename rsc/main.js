@@ -16,7 +16,6 @@ function regForMessages() {
     if (eventBusOpen) {
     	eventBus.registerHandler('OUTPUT', function (error, message) {
             if (message) {
-				console.info('Found message: ' + message);
 				var msgList = $("div#messages");
 				msgList.html(msgList.html() + "<div>" + JSON.stringify(message.body) + "</div>");
 

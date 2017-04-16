@@ -20,18 +20,18 @@ import io.vertx.ext.web.handler.sockjs.PermittedOptions;
 import io.vertx.ext.web.handler.sockjs.SockJSHandler;
 import io.vertx.ext.web.handler.sockjs.SockJSHandlerOptions;
 import io.vertx.ext.web.impl.RouterImpl;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.rabbit.listener.SimpleMessageListenerContainer;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
-import org.springframework.jms.core.JmsTemplate;
-import org.springframework.jms.listener.DefaultMessageListenerContainer;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
 import javax.annotation.PostConstruct;
-import javax.jms.ConnectionFactory;
-import javax.jms.JMSException;
-import javax.jms.MessageListener;
-import javax.jms.TextMessage;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -47,14 +47,30 @@ import static java.util.stream.Collectors.toList;
  * Created by saipkri on 14/04/17.
  */
 @Component
+@Configuration
 public class Bootstrap {
 
     @Autowired
     private final ApplicationContext applicationContext;
-    private static final String lemon_data_refresh_notif_topic = "lemon_data_refresh_notif_topic";
+    private static final String lemon_data_refresh_notif_queue = "lemon_data_refresh_notif";
 
     public Bootstrap(ApplicationContext applicationContext) {
         this.applicationContext = applicationContext;
+    }
+
+    @Bean
+    public Queue queue() {
+        return new Queue(lemon_data_refresh_notif_queue, true);
+    }
+
+    @Bean
+    public TopicExchange exchange() {
+        return new TopicExchange("lemon_exchange");
+    }
+
+    @Bean
+    public Binding binding(Queue queue, TopicExchange exchange) {
+        return BindingBuilder.bind(queue).to(exchange).with(lemon_data_refresh_notif_queue);
     }
 
     @PostConstruct
@@ -63,7 +79,7 @@ public class Bootstrap {
         VerticleFactory verticleFactory = applicationContext.getBean(SpringVerticleFactory.class);
         vertx.registerVerticleFactory(verticleFactory);
 
-        final JmsTemplate sender = new JmsTemplate((ConnectionFactory) applicationContext.getBean("rabbitConnectionFactory"));
+        final RabbitTemplate sender = new RabbitTemplate((ConnectionFactory) applicationContext.getBean("rabbitConnectionFactory"));
         Router router = new RouterImpl(vertx);
 
         HttpServer httpServer = vertx.createHttpServer();
@@ -81,7 +97,7 @@ public class Bootstrap {
 
         // Cache clear
         router.get("/cache-clear").handler(ctx -> {
-            sender.send(lemon_data_refresh_notif_topic, session -> session.createTextMessage(ctx.request().getParam("name")));
+            sender.convertAndSend(lemon_data_refresh_notif_queue, ctx.request().getParam("name"));
             ctx.response().setStatusCode(200).end("Cache cleared!");
         });
 
@@ -141,21 +157,14 @@ public class Bootstrap {
             }
         }
 
-        DefaultMessageListenerContainer listenerContainer = new DefaultMessageListenerContainer();
-        listenerContainer.setConnectionFactory((ConnectionFactory) applicationContext.getBean("rabbitConnectionFactory"));
-        listenerContainer.setDestinationName(lemon_data_refresh_notif_topic);
-        listenerContainer.setPubSubDomain(true);
-        listenerContainer.setMessageListener((MessageListener) message -> {
-            String text = null;
-            try {
-                text = ((TextMessage) message).getText();
-                vertx.eventBus().publish(AddressPrefixType.CLEAR_CACHE.address(text.trim()), text.trim());
-            } catch (JMSException e) {
-                throw new RuntimeException(e);
-            }
+        SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
+        container.setConnectionFactory(applicationContext.getBean(ConnectionFactory.class));
+        container.setQueueNames(lemon_data_refresh_notif_queue);
+        container.setMessageListener((MessageListener) message -> {
+            vertx.eventBus().publish(AddressPrefixType.CLEAR_CACHE.address(new String(message.getBody()).trim()), new String(message.getBody()).trim());
         });
-        listenerContainer.initialize();
-        listenerContainer.start();
+        container.initialize();
+        container.start();
     }
 
     private LemonConfig[] config(ObjectMapper mapper, Path p) throws java.io.IOException {

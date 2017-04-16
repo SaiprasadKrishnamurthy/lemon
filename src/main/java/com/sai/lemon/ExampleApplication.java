@@ -1,13 +1,13 @@
 package com.sai.lemon;
 
 import org.apache.commons.dbcp2.BasicDataSource;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.jdbc.core.JdbcTemplate;
-import com.rabbitmq.jms.admin.RMQConnectionFactory;
 
 
 @Configuration
@@ -24,12 +24,12 @@ public class ExampleApplication {
     }
 
     @Bean(name = "rabbitConnectionFactory")
-    public RMQConnectionFactory connectionFactory() {
-        RMQConnectionFactory cf = new RMQConnectionFactory();
-        cf.setHost("localhost");
-        cf.setUsername("guest");
-        cf.setPassword("guest");
-        return cf;
+    public CachingConnectionFactory connectionFactory() {
+        CachingConnectionFactory connectionFactory =
+                new CachingConnectionFactory("localhost");
+        connectionFactory.setUsername("guest");
+        connectionFactory.setPassword("guest");
+        return connectionFactory;
     }
 
     public static void main(String[] args) throws Exception {

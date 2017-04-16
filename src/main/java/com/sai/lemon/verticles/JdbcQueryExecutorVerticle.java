@@ -7,6 +7,8 @@ import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
 import io.vertx.core.json.JsonObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
@@ -21,6 +23,8 @@ import static org.springframework.beans.factory.config.ConfigurableBeanFactory.S
 @Component
 @Scope(SCOPE_PROTOTYPE)
 public class JdbcQueryExecutorVerticle extends AbstractVerticle {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(JdbcQueryExecutorVerticle.class);
 
     private JsonObject config;
     private JsonObject recentValue;
@@ -39,7 +43,7 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
 
         // clear the cache.
         vertx.eventBus().consumer(AddressPrefixType.CLEAR_CACHE.address(config.getString("id")), msg -> {
-            if (this.config.getString("name").equals(msg.body())) {
+            if (this.config.getString("id").equals(msg.body())) {
                 this.recentValue = null;
             }
         });
@@ -62,6 +66,7 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
     }
 
     private QueryResults queryFromDb(final JsonObject message) {
+        LOGGER.info("Querying the database for: {} " + message.getString("id"));
         return new QueryResults(jdbcTemplate.queryForList(message.getString("sql")));
     }
 
