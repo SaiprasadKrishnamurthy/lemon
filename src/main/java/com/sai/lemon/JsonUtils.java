@@ -21,4 +21,12 @@ public final class JsonUtils {
             throw new RuntimeException(e);
         }
     }
+
+    public static String toJsonString(final Object jsonObj) {
+        try {
+            return jsonMapper.writeValueAsString(jsonObj);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException(e);
+        }
+    }
 }

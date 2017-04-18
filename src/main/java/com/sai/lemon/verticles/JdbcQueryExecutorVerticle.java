@@ -41,6 +41,8 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
         this.config = config();
         vertx.eventBus().consumer(AddressPrefixType.FETCH_DATA.address(config.getString("id")), this::fetchData);
 
+        vertx.eventBus().consumer(AddressPrefixType.FETCH_DATA_ONCE.address(config.getString("id")), this::fetchDataOnce);
+
         // clear the cache.
         vertx.eventBus().consumer(AddressPrefixType.CLEAR_CACHE.address(config.getString("id")), msg -> {
             if (this.config.getString("id").equals(msg.body())) {
@@ -49,20 +51,37 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
         });
     }
 
+    private void fetchDataOnce(final Message<JsonObject> objectMessage) {
+        if (recentValue == null) {
+            fetchData(objectMessage);
+        } else {
+            vertx.eventBus().send(AddressPrefixType.TRANSFORM_DATA.address(config.getString("id")), recentValue);
+        }
+    }
+
     private void fetchData(final Message<JsonObject> message) {
         if (jdbcTemplate == null) {
             jdbcTemplate = (JdbcTemplate) applicationContext.getBean(message.body().getString("jdbcTemplateName"));
         }
-        if (message.body().getBoolean("disableDatabasePolling")) {
+        if (message.body().getBoolean("dbPushEnabled")) {
             if (recentValue == null) {
                 QueryResults rows = queryFromDb(message.body());
                 recentValue = JsonUtils.toJsonObject(rows);
+                vertx.eventBus().send(AddressPrefixType.TRANSFORM_DATA.address(config.getString("id")), recentValue);
             }
         } else {
             QueryResults rows = queryFromDb(message.body());
-            recentValue = JsonUtils.toJsonObject(rows);
+            if (recentValue == null) {
+                recentValue = JsonUtils.toJsonObject(rows);
+                vertx.eventBus().send(AddressPrefixType.TRANSFORM_DATA.address(config.getString("id")), recentValue);
+            } else {
+                JsonObject old = recentValue;
+                recentValue = JsonUtils.toJsonObject(rows);
+                if (!recentValue.toString().equals(old.toString())) {
+                    vertx.eventBus().send(AddressPrefixType.TRANSFORM_DATA.address(config.getString("id")), recentValue);
+                }
+            }
         }
-        vertx.eventBus().send(AddressPrefixType.TRANSFORM_DATA.address(config.getString("id")), recentValue);
     }
 
     private QueryResults queryFromDb(final JsonObject message) {

@@ -2,6 +2,7 @@ package com.sai.lemon.core;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.dataformat.yaml.YAMLFactory;
+import com.sai.lemon.JsonUtils;
 import com.sai.lemon.model.AddressPrefixType;
 import com.sai.lemon.model.LemonConfig;
 import com.sai.lemon.model.Visualization;
@@ -138,10 +139,6 @@ public class Bootstrap {
                 })
                 .collect(toList());
 
-
-        System.out.println(configs);
-
-
         // needs to be done in a loop per config.
         for (LemonConfig config : configs) {
             for (Visualization vis : config.getVisualizations()) {
@@ -153,10 +150,21 @@ public class Bootstrap {
                 vertx.deployVerticle(verticleFactory.prefix() + ":" + DataTransformerVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(false));
                 vertx.deployVerticle(verticleFactory.prefix() + ":" + OutputDispatcherVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(false));
                 vertx.deployVerticle(verticleFactory.prefix() + ":" + ClearCacheVerticle.class.getName(), new DeploymentOptions().setInstances(instances).setConfig(conf).setWorker(false));
-                vertx.setPeriodic(Long.parseLong(vis.getDataPushFrequencyInSeconds().trim()) * 1000, timerId -> vertx.eventBus().send(AddressPrefixType.FETCH_DATA.address(vis.getId()), conf));
+                vertx.setPeriodic(Long.parseLong(vis.getStaleDataNoMoreThanSeconds().trim()) * 1000, timerId -> vertx.eventBus().send(AddressPrefixType.FETCH_DATA.address(vis.getId()), conf));
             }
         }
 
+        // Request data one off.
+        router.get("/data").handler(ctx -> {
+            for (LemonConfig config : configs) {
+                for (Visualization vis : config.getVisualizations()) {
+                    JsonObject conf = new JsonObject(JsonUtils.toJsonString(vis));
+                    conf.put("jdbcTemplateName", config.getJdbcTemplateName());
+                    vertx.eventBus().send(AddressPrefixType.FETCH_DATA_ONCE.address(vis.getId()), conf);
+                }
+                ctx.response().setStatusCode(201).end();
+            }
+        });
         SimpleMessageListenerContainer container = new SimpleMessageListenerContainer();
         container.setConnectionFactory(applicationContext.getBean(ConnectionFactory.class));
         container.setQueueNames(lemon_data_refresh_notif_queue);
