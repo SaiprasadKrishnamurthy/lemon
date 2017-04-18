@@ -12,6 +12,8 @@ public class Visualization {
     private boolean dbPushEnabled;
     private String scaleInstances = "1";
     private String type = "";
+    private String gaugeMax;
+    private String gaugeMin = "0";
 
 
 }

@@ -12,6 +12,12 @@
      staleDataNoMoreThanSeconds: 2
      dbPushEnabled: false
 
+   - id: FirstGauge
+     type: gauge
+     sql: "select avg(cpu_utilization) cpu_utilization from clients_activity"
+     dbPushEnabled: true
+     gaugeMax: 140
+
 
 
 

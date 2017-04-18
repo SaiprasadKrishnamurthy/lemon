@@ -3,6 +3,7 @@ package com.sai.lemon.verticles;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.sai.lemon.JsonUtils;
 import com.sai.lemon.model.AddressPrefixType;
+import com.sai.lemon.model.GaugeChart;
 import com.sai.lemon.model.PieChart;
 import com.sai.lemon.model.XYChart;
 import io.vertx.core.AbstractVerticle;
@@ -56,6 +57,15 @@ public class VisualizerConversionVerticle extends AbstractVerticle {
         } else if (config.getString("type").equalsIgnoreCase("bar")) {
             XYChart xyChart = getXyChart(message);
             message.reply(JsonUtils.toJsonObject(xyChart));
+        } else if (config.getString("type").equalsIgnoreCase("gauge")) {
+            GaugeChart gaugeChart = new GaugeChart();
+            List<JsonObject> resultsArr = message.body().getJsonArray("results").getList();
+            Number result = (Number) resultsArr.get(0).getMap().values().iterator().next();
+            gaugeChart.setId(config.getString("id"));
+            gaugeChart.setMinValue(Integer.parseInt(config.getString("gaugeMin")));
+            gaugeChart.setMaxValue(Integer.parseInt(config.getString("gaugeMax")));
+            gaugeChart.setSelectedValue(result);
+            message.reply(JsonUtils.toJsonObject(gaugeChart));
         }
     }
 

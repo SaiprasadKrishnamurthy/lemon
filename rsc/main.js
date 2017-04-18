@@ -37,7 +37,7 @@ function regForMessages() {
                         data = [data];
                     }
 
-                }
+
 
                 if(document.getElementById("chartContent_"+id) == null)
                 {
@@ -75,6 +75,50 @@ function regForMessages() {
 
                 data = {"title":id,"data":finaldata}
                 drawPie(id,data);
+                }else if(object["type"] == "gauge")
+                                 {
+                                     var data = object;
+
+
+                                      if(document.getElementById("chartContent_"+id) == null)
+                                     {
+                                        if(divCount%3==0)
+                                        {
+                                            appendNode = document.createElement('div');
+                                            appendNode.className="row";
+                                            $("div#messages").append(appendNode);
+                                        }
+                                         var gaugeNode = document.createElement('div');
+                                         gaugeNode.id="chartContent_"+id;
+                                         gaugeNode.className="col-sm-4";
+                                         gaugeNode.style="border: 2px solid powderblue;"
+                                         appendNode.appendChild(gaugeNode);
+                                         divCount = divCount+1;
+
+
+
+                                         	var powerGauge = gauge("#chartContent_"+id, {
+                                         		size: 300,
+                                         		clipWidth: 300,
+                                         		clipHeight: 300,
+                                         		ringWidth: 60,
+                                         		maxValue: data["maxValue"],
+                                         		transitionMs: 4000,
+                                         	},id);
+                                         	powerGauge.render();
+                                         	powerGauge.update(data["selectedValue"]);
+                                         	window["chartContent_"+id] = powerGauge;
+                                         	document.getElementById("chartContent_"+id).childNodes[0].style="margin-left:25%;margin-top: 8%;"
+
+                                     }else
+                                     {
+                                         var powerGauge = window["chartContent_"+id];
+                                         console.log(powerGauge);
+                                         console.log(data["selectedValue"]);
+                                         powerGauge.update(data["selectedValue"]);
+
+                                     }
+                                 }
 
 				//msgList.html(msgList.html() + "<div>" + JSON.stringify(message.body) + "</div>");
 
