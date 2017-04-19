@@ -14,7 +14,8 @@ import java.util.Map;
  */
 public class UpperCaseDataTransformer implements DataTransformer {
     @Override
-    public JsonObject transformationFunction(ApplicationContext applicationContext, JsonObject jsonIn) {
+    public JsonObject apply(ApplicationContext applicationContext, JsonObject jsonIn) {
+        System.out.println(applicationContext+" , "+jsonIn);
         return jsonIn;
     }
 }

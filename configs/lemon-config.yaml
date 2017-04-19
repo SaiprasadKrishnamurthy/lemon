@@ -4,6 +4,7 @@
    - id: DeviceTypeCount
      type: pie
      sql: "select client_type, count(client_type) from clients_activity  where client_status='active' group by client_type"
+     dataTransfomerClass: transformers.UpperCaseDataTransformer
      dbPushEnabled: true
 
    - id: SecondOne

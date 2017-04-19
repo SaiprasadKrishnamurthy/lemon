@@ -3,6 +3,7 @@ package com.sai.lemon.verticles;
 import com.sai.lemon.JsonUtils;
 import com.sai.lemon.model.AddressPrefixType;
 import com.sai.lemon.model.QueryResults;
+import com.sai.lemon.model.SqlProvider;
 import io.vertx.core.AbstractVerticle;
 import io.vertx.core.Vertx;
 import io.vertx.core.eventbus.Message;
@@ -14,6 +15,7 @@ import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Component;
+import org.springframework.util.StringUtils;
 
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 
@@ -38,7 +40,7 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
 
     @Override
     public void start() throws Exception {
-        this.config = config();
+        this.config = this.config == null ? config() : this.config;
         vertx.eventBus().consumer(AddressPrefixType.FETCH_DATA.address(config.getString("id")), this::fetchData);
 
         vertx.eventBus().consumer(AddressPrefixType.FETCH_DATA_ONCE.address(config.getString("id")), this::fetchDataOnce);
@@ -51,7 +53,7 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
         });
     }
 
-    private void fetchDataOnce(final Message<JsonObject> objectMessage) {
+    void fetchDataOnce(final Message<JsonObject> objectMessage) {
         if (recentValue == null) {
             fetchData(objectMessage);
         } else {
@@ -59,7 +61,7 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
         }
     }
 
-    private void fetchData(final Message<JsonObject> message) {
+    void fetchData(final Message<JsonObject> message) {
         if (jdbcTemplate == null) {
             jdbcTemplate = (JdbcTemplate) applicationContext.getBean(message.body().getString("jdbcTemplateName"));
         }
@@ -86,15 +88,29 @@ public class JdbcQueryExecutorVerticle extends AbstractVerticle {
 
     private QueryResults queryFromDb(final JsonObject message) {
         LOGGER.info("Querying the database for: {} " + message.getString("id"));
-        return new QueryResults(jdbcTemplate.queryForList(message.getString("sql")));
-    }
-
-    public String toString() {
-        return this.getClass().getCanonicalName() + ":" + this.hashCode() + " [" + config.getString("name") + "]";
+        String sql = message.getString("sql");
+        if (StringUtils.hasText(config.getString("sqlProviderClass"))) {
+            try {
+                SqlProvider sqlProvider = (SqlProvider) Class.forName(config.getString("sqlProviderClass")).newInstance();
+                sql = sqlProvider.sql(config, applicationContext);
+            } catch (Exception ex) {
+                LOGGER.error("Error while trying to invoke the SQL Provider: {}", ex);
+                throw new RuntimeException(ex);
+            }
+        }
+        return new QueryResults(jdbcTemplate.queryForList(sql));
     }
 
     // For Unit testing
     void setVertx(final Vertx vertx) {
         this.vertx = vertx;
+    }
+
+    void setConfig(final JsonObject config) {
+        this.config = config;
+    }
+
+    JsonObject getRecentValue() {
+        return recentValue;
     }
 }

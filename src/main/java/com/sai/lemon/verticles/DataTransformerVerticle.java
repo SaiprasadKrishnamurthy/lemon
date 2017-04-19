@@ -9,10 +9,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.annotation.Scope;
 import org.springframework.stereotype.Component;
-import transformers.UpperCaseDataTransformer;
-
-import java.util.List;
-import java.util.Map;
+import org.springframework.util.StringUtils;
 
 import static org.springframework.beans.factory.config.ConfigurableBeanFactory.SCOPE_PROTOTYPE;
 
@@ -40,17 +37,24 @@ public class DataTransformerVerticle extends AbstractVerticle {
 
     private void transformData(final Message<JsonObject> message) {
         try {
-            DataTransformer transformerClass = UpperCaseDataTransformer.class.newInstance(); // TODO get from config
-            JsonObject transformedData = transformerClass.transformationFunction(applicationContext, message.body());
+            JsonObject transformedData = message.body();
+            if (StringUtils.hasText(config.getString("dataTransfomerClass"))) {
+                DataTransformer transformerClass = (DataTransformer) Class.forName(config.getString("dataTransfomerClass")).newInstance(); // TODO get from config
+                transformedData = transformerClass.apply(applicationContext, message.body());
+            }
             vertx.eventBus()
                     .send(AddressPrefixType.AUDIT_DATA.address(config.getString("id")), transformedData);
 
             vertx.eventBus()
                     .send(AddressPrefixType.OUTPUT_DISPATCHER.address(config.getString("id")), transformedData);
+        } catch (ClassNotFoundException | InstantiationException |
+                IllegalAccessException e
+                )
 
-        } catch (InstantiationException | IllegalAccessException e) {
+        {
             e.printStackTrace();
         }
+
     }
 
     public String toString() {

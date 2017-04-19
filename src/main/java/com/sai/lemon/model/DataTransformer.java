@@ -10,5 +10,5 @@ import java.util.Map;
  * Created by saipkri on 14/04/17.
  */
 public interface DataTransformer {
-    JsonObject transformationFunction(ApplicationContext applicationContext, JsonObject jsonIn);
+    JsonObject apply(ApplicationContext applicationContext, JsonObject jsonIn);
 }
