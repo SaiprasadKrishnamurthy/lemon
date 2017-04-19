@@ -35,22 +35,5 @@ public class ExampleApplication {
     public static void main(String[] args) throws Exception {
         System.setProperty("lemon.configs.dir", "/Users/saipkri/learning/lemon/configs");
         ApplicationContext context = new AnnotationConfigApplicationContext(ExampleApplication.class);
-        /*ObjectMapper mapper = new ObjectMapper(new YAMLFactory());
-        //System.out.println(mapper.writeValueAsString(mapper.readValue(new File("configs/lemon-config.yaml"), LemonConfig[].class)));
-
-        LemonConfig c = new LemonConfig();
-        c.setName("foo");
-        c.setDataSourceSpringBeanName("ds spring");
-        Visualization v1 = new Visualization();
-        v1.setName("v1 name");
-        v1.setSql("sql name");
-
-        c.setVisualizations(new Visualization[]{v1, v1});
-
-        System.out.println(mapper.writeValueAsString(c));
-
-        // Scale the verticles on cores: create 4 instances during the deployment
-*/
-
     }
 }

@@ -861,21 +861,7 @@ var labels = {
 		}
 
 		// 3. Add the value label
-		if (!include.value) {
-			labelGroup.append("text")
-				.attr("id", function(d, i) { return pie.cssPrefix +  "segmentValue" + i + "-" + section; })
-				.attr("class", pie.cssPrefix + "segmentValue-" + section)
-				.text(function(d, i) {
-          formatterContext.index = i;
-          formatterContext.part = "value";
-          formatterContext.value = d.value;
-          formatterContext.label = d.value;
-          return settings.formatter ? settings.formatter(formatterContext, d.value) : d.value;
-        })
-				.style("font-size", settings.value.fontSize + "px")
-				.style("font-family", settings.value.font)
-				.style("fill", settings.value.color);
-		}
+
 	},
 
 	/**

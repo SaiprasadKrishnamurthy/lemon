@@ -47,7 +47,7 @@ public class JdbcQueryExecutorVerticleTest {
         vertx.deployVerticle(jdbcQueryExecutorVerticle);
     }
 
-    @Test(timeout = 1000L)
+    @Test(timeout = 4000L)
     public void shouldFetchDataForDBPushEnabledScenario(TestContext context) {
         Async async = context.async();
         Map<String, Object> row = new LinkedHashMap<>();
@@ -66,7 +66,7 @@ public class JdbcQueryExecutorVerticleTest {
         });
     }
 
-    @Test(timeout = 1000L)
+    @Test(timeout = 4000L)
     public void shouldFetchDataForDBPushEnabledScenarioAndShouldQueryDBOnlyOnce(TestContext context) {
         Async async = context.async();
         Map<String, Object> row = new LinkedHashMap<>();

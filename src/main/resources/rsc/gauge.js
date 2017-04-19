@@ -82,7 +82,7 @@ var gauge = function(container, configuration,title) {
 	that.configure = configure;
 
 	function centerTranslation() {
-		return 'translate('+r +','+ (parseInt(r+30)) +')';
+		return 'translate('+(parseInt(r+100))  +','+ (parseInt(r+100)) +')';
 	}
 
 	function isRendered() {
@@ -96,15 +96,7 @@ var gauge = function(container, configuration,title) {
 				.attr('class', 'gauge')
 				.attr('width', config.clipWidth)
 				.attr('height', config.clipHeight);
-		svg.append("g")
-		         .attr('width', config.clipWidth)
-                 .attr('height', 40)
-                .attr("transform", "translate(100,40)")
-                 .append("text")
-                  .attr("class", "title")
-                  .attr("x", 25)
-                  .attr("y", -20)
-                  .text(title);
+
 
 		var centerTx = centerTranslation();
 

@@ -1210,6 +1210,8 @@ console.log("csrf ",csrf);
 var colors = [];
 function drawPie(id,data)
 {
+
+
 	var windowWidth = $(window).width();
     var blockFinalWidth = (windowWidth - 60-60-28-150)/2;
 	if(typeof chartTitle == "undefined")
@@ -1220,7 +1222,7 @@ console.log(chartTitle);
 	var objdata = {
 	"header": {
 		"title": {
-			"text": id,
+			"text": "",
 			"fontSize": 18,
 			"font": "verdana",
 			"color": "black"
